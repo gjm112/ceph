@@ -1,0 +1,51 @@
+---
+title: "CEPH stuff"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(regclass)
+ceph <- read.csv("/Users/gregorymatthews/Downloads/ceph_study.csv")
+
+ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")] <- c(3, 5.8, 1.4, 1.8, 31.4, 27.4, 0.5, 16.1)
+# 
+# OB = 3.0
+# ANB = 5.8
+# Wits = 1.4
+# Jacobi = 1.8
+# U1-NF = 31.4
+# U6-NF = 27.4
+# OP-FH = 0.5
+# OP-SN = 16.1
+
+mod_full <- glm(
+  OB ~ U1.NF * U6.NF,
+  ceph,
+  family = gaussian()
+)
+
+mod_red <- glm(
+  OB ~ U1.NF + U6.NF,
+  ceph,
+  family = gaussian()
+)
+
+#Testing for interaction 
+anova(mod_red,mod_full)
+
+plot(mod_full,1)
+
+
+```
+
+```{r}
+confint(mod_full, "U1.NF")
+confint(mod_full, "U6.NF")
+confint(mod_full, "U1.NF:U6.NF")
+
+summary(mod_full)
+```
+
