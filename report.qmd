@@ -1,16 +1,51 @@
 ---
-title: "CEPH stuff"
-format: html
+title: "CEPH analysis for Dr. Timothy Q. Levine"
+author: Sebastian Kirkpatrick and Gregory J. Matthews
+format: pdf
 editor: visual
 ---
 
-## Quarto
+# Notes from meeting
+- We could look at the ratio of U1 to U6 and how that's related to OB.  Just a scatter plot.  
+- Add p-values for the correlation tests at the end.
+- Add corrections for multiple hypothesis testing for cor.test.
+- Make the scatterplots at the bottom bigger and individual.  
+
+
+
+## Executive Summary
+
+We first did some exploratory data analysis.  We note that U1.NF and U6.NF are very highly positively correlated with each other.  We also note that age does appear to have any substantial relationship with U1.NF and U6.NF whereas U1.NF and U6.NF have higher medians in males than females.
+
+We present results from two models:
+  1. Model 1: Response OB with predictors U1.NF and U6.NF
+  2. Model 2: Model 1 + demographics (age and gender)
+
+## Model 1 results 
+
+We observed a negative association between U6-NF and OB across the patient study population. When modeling OB based on both U1-NF and U6-NF measurements, we found that, for all values of U1-NF, an increase in U6-NF is associated with a decrease in OB. Specifically, for the average U1-NF value, a 1 mm increase in U6-NF corresponds to a 0.449 mm (se: 0.234) reduction in OB. As U1-NF increased, the decrease in OB associated with higher U6-NF values became more pronounced. To assess this further, we examined the slopes at the four quantiles of U1-NF, as well as +/- 1 standard deviation from the mean. In all cases, the relationship between OB and U6-NF remained negative, indicating a consistent pattern.
+
+## Model 2 results
+Model 2 controls for age and gender of the patient.  We find that gender is significant at the $\alpha$ = 0.05 level and we estimate that with all other variables held constant that males have an OB 1.61mm larger than females on average.  As before, we observe a negative relationship between U6-NF and OB. When controlling for age and sex for the average U1-NF value, a 1 mm increase in U6-NF corresponds to a 0.545mm (se: 0.219) reduction in OB, slightly larger than estimated without controlling for demographics.  
+
+
+
+## Correlations 
+Regarding the relationships between OP measures (OP.SN and OP-FH) and the other measurements, we found that ANB showed the weakest correlation with both OP measures. On the other hand, Wits had a moderate negative correlation (around -0.3) with both OP.SN and OP-FH. In contrast, Jacobi exhibited a stronger, positive correlation with both OP measures. For both Wits and Jacobi, the correlations were stronger with OP-FH than with OP.SN.
+
+# Analysis Code
+
+```{r message = FALSE, warning = FALSE}
+library(regclass)
+library(tidyverse)
+```
 
 ```{r}
-library(regclass)
 ceph <- read.csv("/Users/gregorymatthews/Downloads/ceph_study.csv")
 
-ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")] <- c(3, 5.8, 1.4, 1.8, 31.4, 27.4, 0.5, 16.1)
+#Manual fix
+ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")] <- 
+  c(3, 5.8, 1.4, 1.8, 31.4, 27.4, 0.5, 16.1)
 # 
 # OB = 3.0
 # ANB = 5.8
@@ -20,7 +55,66 @@ ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.S
 # U6-NF = 27.4
 # OP-FH = 0.5
 # OP-SN = 16.1
+```
 
+## Exploratory Data Analysis and Summary Statistics
+```{r}
+table(ceph$gender)
+summary(ceph[,c("pt.age","OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")])
+
+ggplot(aes(x = U1.NF, y = OB), data= ceph) + geom_point() + geom_smooth()
+
+ggplot(aes(x = U6.NF, y = OB), data= ceph) + geom_point() + geom_smooth()
+
+ggplot(aes(x = U1.NF, y = U6.NF), data= ceph) + geom_point() + geom_smooth()
+
+
+ggplot(aes(x = U1.NF/U6.NF, y = OB), data= ceph) + geom_point() + geom_smooth()
+
+
+ceph |>
+  mutate(`U1-NF Group` = cut(U1.NF, breaks = quantile(U1.NF, probs = seq(0, 1, 0.25)), include.lowest = TRUE)) %>%
+  ggplot(aes(x = U6.NF, y = OB, color = `U1-NF Group`)) +
+  geom_smooth(span = 1, se = F) +
+  geom_point() + 
+  labs(title = "Effect of U6-NF on OB across U1-NF Levels")
+
+ceph |>
+  mutate(`U1-NF Group` = cut(U1.NF, breaks = quantile(U1.NF, probs = seq(0, 1, 0.25)), include.lowest = TRUE)) %>%
+  ggplot(aes(x = U6.NF, y = OB, color = `U1-NF Group`)) +
+  geom_smooth(span = 1, se = F, method = "lm") +
+  geom_point() + 
+  labs(title = "Effect of U6-NF on OB across U1-NF Levels")
+
+
+#Demographics and OB
+ggplot(aes(x = pt.age, y = OB), data= ceph) + geom_point() + geom_smooth()
+
+ggplot(aes(x = pt.age, y = U1.NF), data= ceph) + geom_point() + geom_smooth()
+
+ggplot(aes(x = pt.age, y = U6.NF), data= ceph) + geom_point() + geom_smooth()
+
+ggplot(aes(x = factor(gender), y = OB), data= ceph) + geom_boxplot()
+
+#Males have larger median U6.NF and U1.NF than females
+ggplot(aes(x = factor(gender), y = U1.NF), data= ceph) + geom_boxplot()
+
+ggplot(aes(x = factor(gender), y = U6.NF), data= ceph) + geom_boxplot()
+
+
+ceph %>% group_by(gender) %>% summarize(mean(U1.NF),sd(U1.NF))
+ceph %>% group_by(gender) %>% summarize(mean(U6.NF), sd(U6.NF))
+
+t.test(ceph$U1.NF ~ ceph$gender)
+t.test(ceph$U6.NF ~ ceph$gender)
+```
+
+
+## Analysis model
+
+## First model no age or sex
+
+```{r}
 mod_full <- glm(
   OB ~ U1.NF * U6.NF,
   ceph,
@@ -36,16 +130,219 @@ mod_red <- glm(
 #Testing for interaction 
 anova(mod_red,mod_full)
 
-plot(mod_full,1)
+plot(mod_full)
+#VIF(mod_full) # Not ideal but
 
-
-```
-
-```{r}
-confint(mod_full, "U1.NF")
-confint(mod_full, "U6.NF")
-confint(mod_full, "U1.NF:U6.NF")
+library(emmeans)
+emtrends(mod_full, ~ U1.NF, var = "U6.NF")
 
 summary(mod_full)
+
+coef(mod_full)["U6.NF"]
+confint(mod_full, "U6.NF")
+
+heat_grid <- expand.grid(
+  U1.NF = seq(min(ceph$U1.NF), max(ceph$U1.NF), length.out = 15),
+  U6.NF = seq(min(ceph$U6.NF), max(ceph$U6.NF), length.out = 15)
+)
+
+heat_grid$pred_OB <- predict(mod_full, newdata = heat_grid, type = "response")
+
+heat_grid |>
+  ggplot(aes(x = U6.NF, y = U1.NF, z = pred_OB)) +
+  geom_tile(aes(fill = pred_OB)) +
+  geom_contour(color = "black") +
+  scale_fill_viridis_c() +
+  labs(title = "Predicted OB",
+       x = "U6.NF", y = "U1.NF", fill = "Predicted OB") +
+  theme_minimal()
+
+
+library(interactions)
+interact_plot(mod_full, pred = U6.NF, modx = U1.NF)
+
+
+#slope of OB vs U6.NF for average U1.NF
+coef(mod_full)["U6.NF"] + coef(mod_full)["U1.NF:U6.NF"]*mean(ceph$U1.NF)
+
+#se for the estimate
+sqrt(vcov(mod_full)["U6.NF","U6.NF"] + vcov(mod_full)["U1.NF:U6.NF","U1.NF:U6.NF"] + 2*vcov(mod_full)["U6.NF","U1.NF:U6.NF"])
 ```
 
+
+## First model no age or sex
+```{r}
+mod_full <- glm(
+  OB ~ pt.age + gender + U1.NF * U6.NF,
+  ceph,
+  family = gaussian()
+)
+
+mod_red <- glm(
+  OB ~ pt.age + gender + U1.NF + U6.NF,
+  ceph,
+  family = gaussian()
+)
+
+#Testing for interaction 
+anova(mod_red,mod_full)
+
+plot(mod_full)
+#VIF(mod_full) # Not ideal but
+
+library(emmeans)
+emtrends(mod_full, ~ U1.NF, var = "U6.NF")
+
+summary(mod_full)
+
+coef(mod_full)["U6.NF"]
+confint(mod_full, "U6.NF")
+
+heat_grid <- expand.grid(
+  U1.NF = seq(min(ceph$U1.NF), max(ceph$U1.NF), length.out = 15),
+  U6.NF = seq(min(ceph$U6.NF), max(ceph$U6.NF), length.out = 15)
+)
+
+heat_grid$pt.age <- 20
+heat_grid$gender <- "male"
+
+heat_grid$pred_OB <- predict(mod_full, newdata = heat_grid, type = "response")
+
+heat_grid |>
+  ggplot(aes(x = U6.NF, y = U1.NF, z = pred_OB)) +
+  geom_tile(aes(fill = pred_OB)) +
+  geom_contour(color = "black") +
+  scale_fill_viridis_c() +
+  labs(title = "Predicted OB - Male, Age 20",
+       x = "U6.NF", y = "U1.NF", fill = "Predicted OB") +
+  theme_minimal()
+
+heat_grid$pt.age <- 20
+heat_grid$gender <- "female"
+
+heat_grid$pred_OB <- predict(mod_full, newdata = heat_grid, type = "response")
+
+heat_grid |>
+  ggplot(aes(x = U6.NF, y = U1.NF, z = pred_OB)) +
+  geom_tile(aes(fill = pred_OB)) +
+  geom_contour(color = "black") +
+  scale_fill_viridis_c() +
+  labs(title = "Predicted OB - Female, Age 20",
+       x = "U6.NF", y = "U1.NF", fill = "Predicted OB") +
+  theme_minimal()
+
+
+library(interactions)
+interact_plot(mod_full, pred = U6.NF, modx = U1.NF)
+
+coef(mod_full)["U6.NF"] + coef(mod_full)["U1.NF:U6.NF"]*mean(ceph$U1.NF)
+
+
+sqrt(vcov(mod_full)["U6.NF","U6.NF"] + vcov(mod_full)["U1.NF:U6.NF","U1.NF:U6.NF"] + 2*vcov(mod_full)["U6.NF","U1.NF:U6.NF"])
+
+
+#Testing for interaction of gender with the U1 and U6 vars
+#Only include age and sex as main effects.  
+mod_full2 <- glm(
+  OB ~ pt.age + gender*U1.NF +  gender*U6.NF +  U1.NF * U6.NF,
+  ceph,
+  family = gaussian()
+)
+
+anova(mod_full,mod_full2)
+
+
+```
+
+
+
+
+```{r}
+# Now Correlations
+p1_cor_value <- cor(ceph$OP.SN, ceph$ANB)
+p2_cor_value <- cor(ceph$OP.SN, ceph$Wits)
+p3_cor_value <- cor(ceph$OP.SN, ceph$Jacobi)
+p4_cor_value <- cor(ceph$OP.FH, ceph$ANB)
+p5_cor_value <- cor(ceph$OP.FH, ceph$Wits)
+p6_cor_value <- cor(ceph$OP.FH, ceph$Jacobi)
+
+(p1_cor_test <- cor.test(ceph$OP.SN, ceph$ANB))
+(p2_cor_test <- cor.test(ceph$OP.SN, ceph$Wits))
+(p3_cor_test <- cor.test(ceph$OP.SN, ceph$Jacobi))
+(p4_cor_test <- cor.test(ceph$OP.FH, ceph$ANB))
+(p5_cor_test <- cor.test(ceph$OP.FH, ceph$Wits))
+(p6_cor_test <- cor.test(ceph$OP.FH, ceph$Jacobi))
+
+
+pvals <- c(p1_cor_test$p.value,
+p2_cor_test$p.value,
+p3_cor_test$p.value,
+p4_cor_test$p.value,
+p5_cor_test$p.value,
+p6_cor_test$p.value)
+
+#using a Boinferroni correction
+p.adjust(pvals,method = "bon")
+#Using Benjamini Hochberg (fdr)
+p.adjust(pvals,method = "fdr")
+
+p1 <- ggplot(ceph, aes(x = OP.SN, y = ANB)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.SN), y = max(ceph$ANB), 
+            label = paste("r =", round(p1_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-SN vs ANB")
+
+p2 <- ggplot(ceph, aes(x = OP.SN, y = Wits)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.SN), y = max(ceph$Wits), 
+            label = paste("r =", round(p2_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-SN vs Wits")
+
+p3 <- ggplot(ceph, aes(x = OP.SN, y = Jacobi)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.SN), y = max(ceph$Jacobi), 
+            label = paste("r =", round(p3_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-SN vs Jacobi")
+
+p4 <- ggplot(ceph, aes(x = OP.FH, y = ANB)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.FH), y = max(ceph$ANB), 
+            label = paste("r =", round(p4_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-FH vs ANB")
+
+p5 <- ggplot(ceph, aes(x = OP.FH, y = Wits)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.FH), y = max(ceph$Wits), 
+            label = paste("r =", round(p5_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-FH vs Wits")
+
+p6 <- ggplot(ceph, aes(x = OP.FH, y = Jacobi)) + 
+  geom_point() + 
+  geom_text(x = min(ceph$OP.FH), y = max(ceph$Jacobi), 
+            label = paste("r =", round(p6_cor_value, 2)), 
+            hjust = 0, vjust = 1, color = "red") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "OP-FH vs Jacobi")
+
+library(patchwork)
+(p1 + p2 + p3) / (p4 + p5 + p6)
+
+
+p1
+p2
+p3
+p4
+p5
+p6
+
+```
