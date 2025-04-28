@@ -6,31 +6,28 @@ editor: visual
 ---
 
 # Notes from meeting
-- We could look at the ratio of U1 to U6 and how that's related to OB.  Just a scatter plot.  
-- Add p-values for the correlation tests at the end.
-- Add corrections for multiple hypothesis testing for cor.test.
-- Make the scatterplots at the bottom bigger and individual.  
 
-
+-   We could look at the ratio of U1 to U6 and how that's related to OB. Just a scatter plot.\
+-   Add p-values for the correlation tests at the end.
+-   Add corrections for multiple hypothesis testing for cor.test.
+-   Make the scatterplots at the bottom bigger and individual.
 
 ## Executive Summary
 
-We first did some exploratory data analysis.  We note that U1.NF and U6.NF are very highly positively correlated with each other.  We also note that age does appear to have any substantial relationship with U1.NF and U6.NF whereas U1.NF and U6.NF have higher medians in males than females.
+We first did some exploratory data analysis. We note that U1.NF and U6.NF are very highly positively correlated with each other. We also note that age does appear to have any substantial relationship with U1.NF and U6.NF whereas U1.NF and U6.NF have higher medians in males than females.
 
-We present results from two models:
-  1. Model 1: Response OB with predictors U1.NF and U6.NF
-  2. Model 2: Model 1 + demographics (age and gender)
+We present results from two models: 1. Model 1: Response OB with predictors U1.NF and U6.NF 2. Model 2: Model 1 + demographics (age and gender)
 
-## Model 1 results 
+## Model 1 results
 
 We observed a negative association between U6-NF and OB across the patient study population. When modeling OB based on both U1-NF and U6-NF measurements, we found that, for all values of U1-NF, an increase in U6-NF is associated with a decrease in OB. Specifically, for the average U1-NF value, a 1 mm increase in U6-NF corresponds to a 0.449 mm (se: 0.234) reduction in OB. As U1-NF increased, the decrease in OB associated with higher U6-NF values became more pronounced. To assess this further, we examined the slopes at the four quantiles of U1-NF, as well as +/- 1 standard deviation from the mean. In all cases, the relationship between OB and U6-NF remained negative, indicating a consistent pattern.
 
 ## Model 2 results
-Model 2 controls for age and gender of the patient.  We find that gender is significant at the $\alpha$ = 0.05 level and we estimate that with all other variables held constant that males have an OB 1.61mm larger than females on average.  As before, we observe a negative relationship between U6-NF and OB. When controlling for age and sex for the average U1-NF value, a 1 mm increase in U6-NF corresponds to a 0.545mm (se: 0.219) reduction in OB, slightly larger than estimated without controlling for demographics.  
 
+Model 2 controls for age and gender of the patient. We find that gender is significant at the $\alpha$ = 0.05 level and we estimate that with all other variables held constant that males have an OB 1.61mm larger than females on average. As before, we observe a negative relationship between U6-NF and OB. When controlling for age and sex for the average U1-NF value, a 1 mm increase in U6-NF corresponds to a 0.545mm (se: 0.219) reduction in OB, slightly larger than estimated without controlling for demographics.
 
+## Correlations
 
-## Correlations 
 Regarding the relationships between OP measures (OP.SN and OP-FH) and the other measurements, we found that ANB showed the weakest correlation with both OP measures. On the other hand, Wits had a moderate negative correlation (around -0.3) with both OP.SN and OP-FH. In contrast, Jacobi exhibited a stronger, positive correlation with both OP measures. For both Wits and Jacobi, the correlations were stronger with OP-FH than with OP.SN.
 
 # Analysis Code
@@ -41,7 +38,7 @@ library(tidyverse)
 ```
 
 ```{r}
-ceph <- read.csv("/Users/gregorymatthews/Downloads/ceph_study.csv")
+ceph <- read.csv("ceph_study.csv")
 
 #Manual fix
 ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")] <- 
@@ -58,6 +55,7 @@ ceph[ceph$U1.NF > 100,c("OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.S
 ```
 
 ## Exploratory Data Analysis and Summary Statistics
+
 ```{r}
 table(ceph$gender)
 summary(ceph[,c("pt.age","OB","ANB","Wits","Jacobi","U1.NF","U6.NF","OP.FH","OP.SN")])
@@ -108,7 +106,6 @@ ceph %>% group_by(gender) %>% summarize(mean(U6.NF), sd(U6.NF))
 t.test(ceph$U1.NF ~ ceph$gender)
 t.test(ceph$U6.NF ~ ceph$gender)
 ```
-
 
 ## Analysis model
 
@@ -169,8 +166,8 @@ coef(mod_full)["U6.NF"] + coef(mod_full)["U1.NF:U6.NF"]*mean(ceph$U1.NF)
 sqrt(vcov(mod_full)["U6.NF","U6.NF"] + vcov(mod_full)["U1.NF:U6.NF","U1.NF:U6.NF"] + 2*vcov(mod_full)["U6.NF","U1.NF:U6.NF"])
 ```
 
-
 ## First model no age or sex
+
 ```{r}
 mod_full <- glm(
   OB ~ pt.age + gender + U1.NF * U6.NF,
@@ -253,9 +250,6 @@ anova(mod_full,mod_full2)
 
 
 ```
-
-
-
 
 ```{r}
 # Now Correlations
@@ -345,4 +339,24 @@ p4
 p5
 p6
 
+```
+
+```{r}
+ggplot(data = ceph,
+  aes(x = ANB, y = Wits)
+) + 
+  geom_point() + 
+  geom_smooth()
+
+ggplot(data = ceph,
+  aes(x = ANB, y = Jacobi)
+) + 
+  geom_point() + 
+  geom_smooth()
+
+ggplot(data = ceph,
+  aes(x = Wits, y = Jacobi)
+) + 
+  geom_point() + 
+  geom_smooth()
 ```
